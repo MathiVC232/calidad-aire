@@ -1,5 +1,4 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Calidad del Aire", page_icon="🌬️", layout="centered")
 
@@ -25,31 +24,9 @@ if st.button("Evaluar calidad del aire"):
     st.markdown(f"<h2 style='color: {color};'>{nivel}</h2>", unsafe_allow_html=True)
     st.write(mensaje)
 
-    # Gráfico de barras con matplotlib
-    categorias = ['Bueno', 'Moderado', 'Malo']
-    valores = [100, 50, 30]  # Valores ilustrativos
-
-    fig, ax = plt.subplots()
-    bars = ax.bar(categorias, valores, color=['green', 'orange', 'red'])
-    ax.set_title("Calidad del aire (categorías)")
-    ax.set_ylabel("Indicadores")
-    ax.set_ylim(0, 120)
-
-    # Destacar barra correspondiente al valor
-    if nivel == "BUENO":
-        bars[0].set_alpha(1.0)
-        bars[1].set_alpha(0.3)
-        bars[2].set_alpha(0.3)
-    elif nivel == "MODERADO":
-        bars[0].set_alpha(0.3)
-        bars[1].set_alpha(1.0)
-        bars[2].set_alpha(0.3)
-    else:
-        bars[0].set_alpha(0.3)
-        bars[1].set_alpha(0.3)
-        bars[2].set_alpha(1.0)
-
-    st.pyplot(fig)
+    # Mostrar barra de progreso para visualizar la calidad
+    progreso = min(valor / 200, 1.0)  # Normaliza valor entre 0 y 1 (suponiendo 200 como máximo para escala)
+    st.progress(progreso)
 
     # Recomendaciones
     st.markdown("### Recomendaciones:")
@@ -62,4 +39,3 @@ if st.button("Evaluar calidad del aire"):
         st.write("- Personas con asma deben tomar precauciones.")
     else:
         st.write("- Disfruta el aire libre con tranquilidad.")
-
