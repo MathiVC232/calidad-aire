@@ -1,88 +1,128 @@
 import streamlit as st
+import pandas as pd
+import time
+import random
+import pydeck as pdk
 
-st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🇪🇨", layout="centered")
+# Configuración de la página
+st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🌎", layout="wide")
 
-st.title("🇪🇨 Simulador de Calidad del Aire por Capitales del Ecuador")
+st.title("🌬️ Evaluador Mejorado de Calidad del Aire – Ecuador")
 
-st.markdown("""
-Selecciona la capital de una provincia del Ecuador para consultar un valor **simulado** del Índice de Calidad del Aire (AQI), basado en condiciones típicas.
-""")
-
-# Diccionario de provincias y capitales con valores simulados de AQI
-capitales_ecuador = {
-    "Quito (Pichincha)": 85,
-    "Guayaquil (Guayas)": 160,
-    "Cuenca (Azuay)": 95,
-    "Loja (Loja)": 70,
-    "Ambato (Tungurahua)": 115,
-    "Riobamba (Chimborazo)": 100,
-    "Portoviejo (Manabí)": 125,
-    "Machala (El Oro)": 135,
-    "Ibarra (Imbabura)": 90,
-    "Latacunga (Cotopaxi)": 105,
-    "Esmeraldas (Esmeraldas)": 130,
-    "Babahoyo (Los Ríos)": 145,
-    "Tulcán (Carchi)": 60,
-    "Nueva Loja (Sucumbíos)": 110,
-    "Tena (Napo)": 75,
-    "Puyo (Pastaza)": 80,
-    "Zamora (Zamora Chinchipe)": 65,
-    "Macas (Morona Santiago)": 78,
-    "Puerto Francisco de Orellana (Orellana)": 120,
-    "Santo Domingo (Santo Domingo de los Tsáchilas)": 130,
-    "Santa Elena (Santa Elena)": 140,
-    "Bolívar (Guaranda)": 85,
-    "Azogues (Cañar)": 90,
-    "San Cristóbal (Galápagos)": 40
+# ---------- Datos simulados ----------
+ciudades = {
+    "Quito": {"aqi": 170, "lat": -0.2295, "lon": -78.5243},
+    "Guayaquil": {"aqi": 145, "lat": -2.1709, "lon": -79.9224},
+    "Cuenca": {"aqi": 100, "lat": -2.9006, "lon": -79.0045},
+    "Loja": {"aqi": 70, "lat": -3.9931, "lon": -79.2042},
+    "Ambato": {"aqi": 120, "lat": -1.2417, "lon": -78.6197},
+    "Machala": {"aqi": 130, "lat": -3.2581, "lon": -79.9554},
+    "Esmeraldas": {"aqi": 130, "lat": 0.9517, "lon": -79.6616},
+    "Manta": {"aqi": 125, "lat": -0.9677, "lon": -80.7128},
+    "Riobamba": {"aqi": 105, "lat": -1.6646, "lon": -78.6546},
+    "Tulcán": {"aqi": 65, "lat": 0.8143, "lon": -77.7174},
+    "Tena": {"aqi": 75, "lat": -1.0375, "lon": -77.8139},
+    "Galápagos": {"aqi": 40, "lat": -0.9022, "lon": -89.5926}
 }
 
-# Estilos por nivel de AQI
-niveles = {
-    "BUENO": {"color": "green", "emoji": "✅", "mensaje": "Puedes respirar tranquilo 😌"},
-    "MODERADO": {"color": "orange", "emoji": "⚠️", "mensaje": "Precaución para personas con asma"},
-    "MALO": {"color": "red", "emoji": "❌", "mensaje": "Evita salir sin mascarilla 😷"}
-}
+# ---------- Selección de ciudad principal ----------
+col1, col2 = st.columns(2)
+with col1:
+    ciudad = st.selectbox("🌆 Selecciona una ciudad", ciudades.keys())
 
-# Menú de selección
-ciudad = st.selectbox("🏙️ Selecciona una capital de provincia:", list(capitales_ecuador.keys()))
+# ---------- Mapa interactivo ----------
+st.subheader("🗺️ Ubicación de la ciudad seleccionada")
 
-aqi = capitales_ecuador[ciudad]
-st.markdown(f"### AQI simulado para **{ciudad}**: `{aqi}`")
+df_map = pd.DataFrame([{
+    "ciudad": ciudad,
+    "lat": ciudades[ciudad]["lat"],
+    "lon": ciudades[ciudad]["lon"]
+}])
 
-# Clasificación
+st.pydeck_chart(pdk.Deck(
+    map_style='mapbox://styles/mapbox/light-v9',
+    initial_view_state=pdk.ViewState(
+        latitude=ciudades[ciudad]["lat"],
+        longitude=ciudades[ciudad]["lon"],
+        zoom=6,
+        pitch=40,
+    ),
+    layers=[
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=df_map,
+            get_position='[lon, lat]',
+            get_color='[255, 0, 0, 160]',
+            get_radius=10000,
+        ),
+    ],
+))
+
+# ---------- Mostrar AQI ----------
+aqi = ciudades[ciudad]["aqi"]
+st.metric(label=f"💨 AQI en {ciudad}", value=aqi)
+
+# ---------- Evaluación y color ----------
 if aqi > 150:
-    nivel = "MALO"
+    nivel, color, emoji = "MALO", "red", "❌"
 elif aqi > 100:
-    nivel = "MODERADO"
+    nivel, color, emoji = "MODERADO", "orange", "⚠️"
 else:
-    nivel = "BUENO"
+    nivel, color, emoji = "BUENO", "green", "✅"
 
-info = niveles[nivel]
-
-# Mostrar resultado visual
 st.markdown(f"""
-<div style="background-color:{info['color']};padding:20px;border-radius:10px;">
-    <h2 style="color:white;text-align:center;">{info['emoji']} {nivel}</h2>
-    <p style="color:white;text-align:center;font-size:18px;">{info['mensaje']}</p>
+<div style="background-color:{color};padding:20px;border-radius:10px;">
+    <h2 style="color:white;text-align:center;">{emoji} {nivel}</h2>
 </div>
 """, unsafe_allow_html=True)
 
-# Indicador visual tipo barra
-st.markdown("#### Indicador de nivel AQI")
-st.progress(min(aqi / 200, 1.0))
+# ---------- Comparador ----------
+with col2:
+    comparar = st.selectbox("🔁 Comparar con otra ciudad", [c for c in ciudades if c != ciudad])
+    aqi2 = ciudades[comparar]["aqi"]
+    st.metric(label=f"AQI en {comparar}", value=aqi2)
 
-# Recomendaciones según nivel
-st.markdown("### 📝 Recomendaciones:")
-if nivel == "MALO":
-    st.write("- Usa mascarilla N95 si sales.")
-    st.write("- Cierra ventanas y evita actividades al aire libre.")
-    st.write("- Usa filtros o purificadores si estás en casa.")
-elif nivel == "MODERADO":
-    st.write("- Evita ejercicio intenso afuera.")
-    st.write("- Personas con asma deben tomar precauciones.")
+# ---------- Gráfico de evolución diaria ----------
+st.subheader("📈 Evolución simulada del AQI durante el día")
+
+horas = [f"{h}:00" for h in range(6, 20)]
+datos_simulados = [aqi + random.randint(-15, 15) for _ in horas]
+
+df_graf = pd.DataFrame({"Hora": horas, "AQI": datos_simulados})
+st.line_chart(df_graf.set_index("Hora"))
+
+# ---------- Botón de alerta ----------
+if st.button("🚨 Activar Alerta Sanitaria"):
+    with st.expander("🔊 Instrucciones en caso de alerta"):
+        st.write("- Evita salir de casa.")
+        st.write("- Usa mascarilla si es necesario salir.")
+        st.write("- Cierra puertas y ventanas.")
+        st.write("- Activa purificador o crea un filtro casero.")
+
+# ---------- Recomendaciones según perfil ----------
+st.subheader("👤 Personaliza las recomendaciones")
+
+edad = st.slider("Edad", 5, 90, 16)
+asma = st.checkbox("Tengo asma o problemas respiratorios")
+zona = st.radio("¿Dónde vives?", ["Urbana", "Rural"])
+
+st.markdown("### Recomendaciones para ti:")
+
+if aqi > 150:
+    st.error("❌ Evita salir.")
+    if asma:
+        st.warning("⚠️ Riesgo alto para personas con asma.")
+elif aqi > 100:
+    st.warning("⚠️ Precaución al hacer ejercicio afuera.")
 else:
-    st.write("- No hay restricciones. ¡Disfruta el aire libre!")
+    st.success("✅ Puedes salir con tranquilidad.")
 
-# Pie
+if zona == "Urbana" and aqi > 120:
+    st.info("🌇 Usa plantas purificadoras dentro de casa o ventilación cruzada.")
+
+if zona == "Rural" and aqi < 100:
+    st.info("🌳 Disfruta del aire limpio de tu zona rural.")
+
+# ---------- Pie de página ----------
 st.markdown("---")
-st.caption("🌐 Simulación educativa – Proyecto estudiantil de predicción ambiental.")
+st.caption("🌐 Proyecto estudiantil – Unidad Educativa Julio Pierregrosse – App desarrollada en Streamlit")
