@@ -1,98 +1,64 @@
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
+import pydeck as pdk
 import pandas as pd
 
-st.set_page_config(page_title="Calidad del Aire Básico", page_icon="🌎", layout="wide")
-st.title("🌬️ Evaluador Básico de Calidad del Aire en Ecuador (sin archivos)")
+st.title("Mapa interactivo básico con PyDeck - Calidad del Aire Ecuador")
 
-# Datos AQI de ejemplo
-aqi_por_provincia = {
-    "Pichincha": 170,
-    "Guayas": 145,
-    "Azuay": 100,
-    "Loja": 70,
-    "Tungurahua": 120,
-}
+# Datos de ejemplo (latitud, longitud, AQI, provincia)
+data = pd.DataFrame({
+    'Provincia': ['Pichincha', 'Guayas', 'Azuay', 'Loja', 'Tungurahua'],
+    'Lat': [-0.1807, -2.1894, -2.8974, -4.0041, -1.2532],
+    'Lon': [-78.4678, -79.8891, -78.9959, -79.2047, -78.6158],
+    'AQI': [170, 145, 100, 70, 120]
+})
 
 def get_color(aqi):
     if aqi > 150:
-        return "red"
+        return [255, 0, 0]       # rojo
     elif aqi > 100:
-        return "orange"
+        return [255, 165, 0]     # naranja
     else:
-        return "green"
+        return [0, 128, 0]       # verde
 
-# Coordenadas muy simples de polígonos (solo aproximados)
-provincias_coords = {
-    "Pichincha": [
-        [-0.1, -78.6],
-        [-0.5, -78.2],
-        [-0.3, -78.0],
-    ],
-    "Guayas": [
-        [-2.5, -79.5],
-        [-2.9, -79.0],
-        [-3.0, -79.6],
-    ],
-    "Azuay": [
-        [-2.8, -78.8],
-        [-3.1, -78.4],
-        [-3.3, -78.9],
-    ],
-    "Loja": [
-        [-4.0, -79.3],
-        [-4.3, -79.1],
-        [-4.4, -79.5],
-    ],
-    "Tungurahua": [
-        [-1.3, -78.5],
-        [-1.6, -78.3],
-        [-1.4, -78.1],
-    ],
-}
+data['color'] = data['AQI'].apply(get_color)
 
-# Crear mapa
-m = folium.Map(location=[-1.5, -78.5], zoom_start=6)
+# Crear el mapa PyDeck
+layer = pdk.Layer(
+    'ScatterplotLayer',
+    data=data,
+    get_position='[Lon, Lat]',
+    get_color='color',
+    get_radius=30000,
+    pickable=True,
+    radius_min_pixels=10,
+    radius_max_pixels=40,
+)
 
-# Añadir polígonos con color y tooltip
-for provincia, coords in provincias_coords.items():
-    aqi = aqi_por_provincia.get(provincia, 50)
-    color = get_color(aqi)
-    folium.Polygon(
-        locations=coords,
-        color="black",
-        fill=True,
-        fill_color=color,
-        fill_opacity=0.6,
-        tooltip=f"{provincia}: AQI {aqi}"
-    ).add_to(m)
+# Configuración del visor
+view_state = pdk.ViewState(
+    latitude=-1.5,
+    longitude=-78.5,
+    zoom=6,
+    pitch=0,
+)
 
-# Mostrar mapa en Streamlit
-st.subheader("Mapa básico de Provincias y Calidad del Aire")
-st_folium(m, width=700, height=500)
+r = pdk.Deck(
+    layers=[layer],
+    initial_view_state=view_state,
+    tooltip={"text": "{Provincia}\nAQI: {AQI}"}
+)
 
-# Selección de provincia para mostrar detalles
-provincias = list(aqi_por_provincia.keys())
-seleccion = st.selectbox("Selecciona una provincia para ver detalles:", provincias)
+st.pydeck_chart(r)
 
-aqi_seleccion = aqi_por_provincia[seleccion]
-st.metric(label=f"AQI en {seleccion}", value=aqi_seleccion)
+# Selección y recomendaciones
+prov = st.selectbox("Selecciona una provincia:", data['Provincia'])
+aqi_sel = data.loc[data['Provincia'] == prov, 'AQI'].values[0]
 
-# Recomendaciones según AQI
-if aqi_seleccion > 150:
+st.metric(f"AQI en {prov}", aqi_sel)
+
+if aqi_sel > 150:
     st.error("❌ Calidad del aire MALA. Usa mascarilla y evita salir.")
-elif aqi_seleccion > 100:
+elif aqi_sel > 100:
     st.warning("⚠️ Calidad MODERADA. Precaución si tienes asma o problemas respiratorios.")
 else:
     st.success("✅ Calidad BUENA. Puedes salir con tranquilidad.")
-
-# Gráfico simulado de evolución diaria del AQI
-st.subheader("📈 Evolución simulada del AQI durante el día")
-horas = [f"{h}:00" for h in range(6, 20)]
-datos_simulados = [max(0, aqi_seleccion + (i - 7)*5) for i in range(len(horas))]
-df_graf = pd.DataFrame({"Hora": horas, "AQI": datos_simulados})
-st.line_chart(df_graf.set_index("Hora"))
-
-st.markdown("---")
-st.caption("🌐 Proyecto estudiantil – Unidad Educativa Julio Pierregrosse – App básica en Streamlit")
