@@ -1,52 +1,74 @@
 import streamlit as st
 
-# Datos simulados para cada ciudad (valores de calidad del aire)
-datos_ciudades = {
-    "Quito": 80,
-    "Guayaquil": 160,
-    "Cuenca": 110,
-    "Loja": 90,
-    "Ambato": 130
+# Configurar la página
+st.set_page_config(page_title="Simulador Calidad del Aire", page_icon="🌬️", layout="centered")
+
+# Título principal
+st.title("🌍 Simulador de Calidad del Aire por Ciudad")
+
+st.markdown("""
+Selecciona una ciudad del Ecuador para consultar un valor **simulado** del Índice de Calidad del Aire (AQI), basado en datos históricos y condiciones comunes.
+""")
+
+# Datos reales aproximados (valores AQI típicos)
+datos_realistas = {
+    "Quito": 85,
+    "Guayaquil": 155,
+    "Cuenca": 95,
+    "Loja": 70,
+    "Ambato": 115,
+    "Esmeraldas": 130,
+    "Manta": 105
 }
 
-st.title("🌆 Simulador de Calidad del Aire por Ciudad")
+# Descripciones por nivel AQI
+niveles = {
+    "BUENO": {"color": "green", "emoji": "✅", "mensaje": "Puedes respirar tranquilo 😌"},
+    "MODERADO": {"color": "orange", "emoji": "⚠️", "mensaje": "Precaución para personas con asma"},
+    "MALO": {"color": "red", "emoji": "❌", "mensaje": "Evita salir sin mascarilla 😷"}
+}
 
-ciudad = st.selectbox("Elige una ciudad:", list(datos_ciudades.keys()))
+# Elegir ciudad
+ciudad = st.selectbox("🌆 Elige una ciudad:", list(datos_realistas.keys()))
 
-valor = datos_ciudades[ciudad]
+# Obtener valor AQI
+aqi = datos_realistas[ciudad]
+st.markdown(f"### AQI en **{ciudad}**: `{aqi}`")
 
-st.write(f"Calidad del aire simulada para **{ciudad}**:")
-
-# Evaluar calidad
-if valor > 150:
+# Evaluación
+if aqi > 150:
     nivel = "MALO"
-    mensaje = "❌ Usa mascarilla 😷"
-    color = "red"
-elif valor > 100:
+elif aqi > 100:
     nivel = "MODERADO"
-    mensaje = "⚠️ Precaución si tienes asma"
-    color = "orange"
 else:
     nivel = "BUENO"
-    mensaje = "✅ Puedes salir tranquilo 😊"
-    color = "green"
 
-# Mostrar resultado
-st.markdown(f"<h2 style='color: {color};'>{nivel}</h2>", unsafe_allow_html=True)
-st.write(mensaje)
+info = niveles[nivel]
 
-# Barra de progreso para visualización
-progreso = min(valor / 200, 1.0)
-st.progress(progreso)
+# Mostrar resultado visual
+st.markdown(f"""
+<div style="background-color:{info['color']};padding:20px;border-radius:10px;">
+    <h2 style="color:white;text-align:center;">{info['emoji']} {nivel}</h2>
+    <p style="color:white;text-align:center;font-size:18px;">{info['mensaje']}</p>
+</div>
+""", unsafe_allow_html=True)
 
-# Recomendaciones
-st.markdown("### Recomendaciones:")
+# Mostrar barra de AQI
+st.markdown("#### Indicador visual del nivel AQI")
+st.progress(min(aqi / 200, 1.0))
+
+# Recomendaciones extra
+st.markdown("### 📝 Recomendaciones:")
 if nivel == "MALO":
-    st.write("- Evita salir si no es necesario.")
-    st.write("- Usa mascarilla N95 o similar.")
-    st.write("- Mantén las ventanas cerradas.")
+    st.write("- Usa mascarilla N95 si sales a la calle.")
+    st.write("- Cierra ventanas y evita ejercitarte afuera.")
+    st.write("- Usa purificadores o plantas si estás en casa.")
 elif nivel == "MODERADO":
-    st.write("- Evita ejercicio intenso afuera.")
-    st.write("- Personas con asma deben tomar precauciones.")
+    st.write("- Personas con asma o alergias deben tener cuidado.")
+    st.write("- Evita actividades físicas intensas al aire libre.")
 else:
-    st.write("- Disfruta el aire libre con tranquilidad.")
+    st.write("- No hay restricciones. ¡Disfruta el día!")
+
+# Pie de página
+st.markdown("---")
+st.caption("🌐 Simulación educativa basada en datos de ciudades del Ecuador. Proyecto estudiantil – Julio Pierregrosse.")
