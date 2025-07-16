@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
-import time
 import random
 import pydeck as pdk
 
-# Configuración de la página
+# Configuración página
 st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🌎", layout="wide")
 
 st.title("🌬️ Evaluador Mejorado de Calidad del Aire – Ecuador")
 
-# ---------- Datos simulados ----------
+# Datos simulados
 ciudades = {
     "Quito": {"aqi": 170, "lat": -0.2295, "lon": -78.5243},
     "Guayaquil": {"aqi": 145, "lat": -2.1709, "lon": -79.9224},
@@ -25,44 +24,16 @@ ciudades = {
     "Galápagos": {"aqi": 40, "lat": -0.9022, "lon": -89.5926}
 }
 
-# ---------- Selección de ciudad principal ----------
-col1, col2 = st.columns(2)
-with col1:
-    ciudad = st.selectbox("🌆 Selecciona una ciudad", ciudades.keys())
+# ======= SECCIÓN 1: Detalle de ciudad seleccionada =======
+st.header("🌆 Información de la ciudad seleccionada")
 
-# ---------- Mapa interactivo ----------
-st.subheader("🗺️ Ubicación de la ciudad seleccionada")
+ciudad = st.selectbox("Selecciona una ciudad:", list(ciudades.keys()))
+info = ciudades[ciudad]
+aqi = info["aqi"]
 
-df_map = pd.DataFrame([{
-    "ciudad": ciudad,
-    "lat": ciudades[ciudad]["lat"],
-    "lon": ciudades[ciudad]["lon"]
-}])
+st.metric(label=f"AQI en {ciudad}", value=aqi)
 
-st.pydeck_chart(pdk.Deck(
-    map_style='mapbox://styles/mapbox/light-v9',
-    initial_view_state=pdk.ViewState(
-        latitude=ciudades[ciudad]["lat"],
-        longitude=ciudades[ciudad]["lon"],
-        zoom=6,
-        pitch=40,
-    ),
-    layers=[
-        pdk.Layer(
-            'ScatterplotLayer',
-            data=df_map,
-            get_position='[lon, lat]',
-            get_color='[255, 0, 0, 160]',
-            get_radius=10000,
-        ),
-    ],
-))
-
-# ---------- Mostrar AQI ----------
-aqi = ciudades[ciudad]["aqi"]
-st.metric(label=f"💨 AQI en {ciudad}", value=aqi)
-
-# ---------- Evaluación y color ----------
+# Evaluación con color y emoji
 if aqi > 150:
     nivel, color, emoji = "MALO", "red", "❌"
 elif aqi > 100:
@@ -76,13 +47,37 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------- Comparador ----------
-with col2:
-    comparar = st.selectbox("🔁 Comparar con otra ciudad", [c for c in ciudades if c != ciudad])
-    aqi2 = ciudades[comparar]["aqi"]
-    st.metric(label=f"AQI en {comparar}", value=aqi2)
+# Mapa centrado en la ciudad seleccionada
+df_ciudad = pd.DataFrame([{
+    "ciudad": ciudad,
+    "lat": info["lat"],
+    "lon": info["lon"],
+    "aqi": aqi
+}])
 
-# ---------- Gráfico de evolución diaria ----------
+st.subheader(f"🗺️ Mapa interactivo de {ciudad}")
+st.pydeck_chart(pdk.Deck(
+    map_style="mapbox://styles/mapbox/light-v9",
+    initial_view_state=pdk.ViewState(
+        latitude=info["lat"],
+        longitude=info["lon"],
+        zoom=10,
+        pitch=0,
+    ),
+    layers=[
+        pdk.Layer(
+            "ScatterplotLayer",
+            data=df_ciudad,
+            get_position='[lon, lat]',
+            get_fill_color="[255, 0, 0, 160]",
+            get_radius=10000,
+            pickable=True,
+        )
+    ],
+    tooltip={"text": "{ciudad}\nAQI: {aqi}"}
+))
+
+# Gráfico simulado evolución del AQI
 st.subheader("📈 Evolución simulada del AQI durante el día")
 
 horas = [f"{h}:00" for h in range(6, 20)]
@@ -91,7 +86,47 @@ datos_simulados = [aqi + random.randint(-15, 15) for _ in horas]
 df_graf = pd.DataFrame({"Hora": horas, "AQI": datos_simulados})
 st.line_chart(df_graf.set_index("Hora"))
 
-# ---------- Botón de alerta ----------
+# ======= SECCIÓN 2: Comparar con otra ciudad =======
+st.header("🔁 Comparar con otra ciudad")
+
+otra_ciudad = st.selectbox("Selecciona la ciudad para comparar:", [c for c in ciudades if c != ciudad])
+aqi2 = ciudades[otra_ciudad]["aqi"]
+st.metric(label=f"AQI en {otra_ciudad}", value=aqi2)
+
+# ======= SECCIÓN 3: Mapa general con todas las ciudades =======
+st.header("🗺️ Mapa interactivo de todas las ciudades del Ecuador")
+
+df_todas = pd.DataFrame([
+    {"ciudad": nombre, "lat": info["lat"], "lon": info["lon"], "aqi": info["aqi"]}
+    for nombre, info in ciudades.items()
+])
+
+layer = pdk.Layer(
+    "ScatterplotLayer",
+    data=df_todas,
+    get_position='[lon, lat]',
+    get_fill_color="""
+        [aqi > 150 ? 255 : aqi > 100 ? 255 : 0,
+         aqi <= 100 ? 200 : 165,
+         0, 160]
+    """,
+    get_radius=7000,
+    pickable=True,
+)
+
+st.pydeck_chart(pdk.Deck(
+    map_style="mapbox://styles/mapbox/light-v9",
+    initial_view_state=pdk.ViewState(
+        latitude=-1.5,
+        longitude=-78.0,
+        zoom=5.5,
+        pitch=0,
+    ),
+    layers=[layer],
+    tooltip={"text": "📍 {ciudad}\nAQI: {aqi}"}
+))
+
+# ======= SECCIÓN 4: Botón de alerta y recomendaciones (puedes seguir agregando aquí) =======
 if st.button("🚨 Activar Alerta Sanitaria"):
     with st.expander("🔊 Instrucciones en caso de alerta"):
         st.write("- Evita salir de casa.")
@@ -99,30 +134,5 @@ if st.button("🚨 Activar Alerta Sanitaria"):
         st.write("- Cierra puertas y ventanas.")
         st.write("- Activa purificador o crea un filtro casero.")
 
-# ---------- Recomendaciones según perfil ----------
-st.subheader("👤 Personaliza las recomendaciones")
-
-edad = st.slider("Edad", 5, 90, 16)
-asma = st.checkbox("Tengo asma o problemas respiratorios")
-zona = st.radio("¿Dónde vives?", ["Urbana", "Rural"])
-
-st.markdown("### Recomendaciones para ti:")
-
-if aqi > 150:
-    st.error("❌ Evita salir.")
-    if asma:
-        st.warning("⚠️ Riesgo alto para personas con asma.")
-elif aqi > 100:
-    st.warning("⚠️ Precaución al hacer ejercicio afuera.")
-else:
-    st.success("✅ Puedes salir con tranquilidad.")
-
-if zona == "Urbana" and aqi > 120:
-    st.info("🌇 Usa plantas purificadoras dentro de casa o ventilación cruzada.")
-
-if zona == "Rural" and aqi < 100:
-    st.info("🌳 Disfruta del aire limpio de tu zona rural.")
-
-# ---------- Pie de página ----------
 st.markdown("---")
 st.caption("🌐 Proyecto estudiantil – Unidad Educativa Julio Pierregrosse – App desarrollada en Streamlit")
