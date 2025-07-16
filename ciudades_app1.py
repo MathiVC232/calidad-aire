@@ -99,7 +99,7 @@ zona = st.radio("¿Dónde vives?", ["Urbana", "Rural"])
 st.markdown("### 📄 Recomendaciones para ti:")
 
 if sel['AQI'] > 150:
-    st.error("❌ Evita salir. Riesgo alto.")
+    st.error("❌ Personas con enfermedades respiratorias, niños y adultos mayores deben evitar actividades prolongadas al aire libre.")
     if asma:
         st.warning("⚠️ Riesgo grave si tienes asma.")
 elif sel['AQI'] > 100:
