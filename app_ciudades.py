@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import random
-import pydeck as pdk
+import folium
+from streamlit_folium import st_folium
 
 # Configuración página
 st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🌎", layout="wide")
@@ -47,35 +48,17 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Mapa centrado en la ciudad seleccionada
-df_ciudad = pd.DataFrame([{
-    "ciudad": ciudad,
-    "lat": info["lat"],
-    "lon": info["lon"],
-    "aqi": aqi
-}])
-
+# Mapa centrado en la ciudad seleccionada usando folium
 st.subheader(f"🗺️ Mapa interactivo de {ciudad}")
-st.pydeck_chart(pdk.Deck(
-    map_style="mapbox://styles/mapbox/light-v9",
-    initial_view_state=pdk.ViewState(
-        latitude=info["lat"],
-        longitude=info["lon"],
-        zoom=10,
-        pitch=0,
-    ),
-    layers=[
-        pdk.Layer(
-            "ScatterplotLayer",
-            data=df_ciudad,
-            get_position='[lon, lat]',
-            get_fill_color="[255, 0, 0, 160]",
-            get_radius=10000,
-            pickable=True,
-        )
-    ],
-    tooltip={"text": "{ciudad}\nAQI: {aqi}"}
-))
+
+m = folium.Map(location=[info["lat"], info["lon"]], zoom_start=12)
+folium.Marker(
+    location=[info["lat"], info["lon"]],
+    popup=f"{ciudad} - AQI: {aqi}",
+    icon=folium.Icon(color="red" if aqi>150 else "orange" if aqi>100 else "green")
+).add_to(m)
+
+st_folium(m, width=700, height=450)
 
 # Gráfico simulado evolución del AQI
 st.subheader("📈 Evolución simulada del AQI durante el día")
@@ -93,40 +76,45 @@ otra_ciudad = st.selectbox("Selecciona la ciudad para comparar:", [c for c in ci
 aqi2 = ciudades[otra_ciudad]["aqi"]
 st.metric(label=f"AQI en {otra_ciudad}", value=aqi2)
 
-# ======= SECCIÓN 3: Mapa general con todas las ciudades =======
+# ======= SECCIÓN 3: Mapa general con folium (todas las ciudades) =======
 st.header("🗺️ Mapa interactivo de todas las ciudades del Ecuador")
 
-df_todas = pd.DataFrame([
-    {"ciudad": nombre, "lat": info["lat"], "lon": info["lon"], "aqi": info["aqi"]}
-    for nombre, info in ciudades.items()
-])
+m2 = folium.Map(location=[-1.5, -78], zoom_start=6)
+for nombre, data in ciudades.items():
+    color_icon = "red" if data["aqi"] > 150 else "orange" if data["aqi"] > 100 else "green"
+    folium.Marker(
+        location=[data["lat"], data["lon"]],
+        popup=f"{nombre} - AQI: {data['aqi']}",
+        icon=folium.Icon(color=color_icon)
+    ).add_to(m2)
 
-layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=df_todas,
-    get_position='[lon, lat]',
-    get_fill_color="""
-        [aqi > 150 ? 255 : aqi > 100 ? 255 : 0,
-         aqi <= 100 ? 200 : 165,
-         0, 160]
-    """,
-    get_radius=7000,
-    pickable=True,
-)
+st_folium(m2, width=700, height=450)
 
-st.pydeck_chart(pdk.Deck(
-    map_style="mapbox://styles/mapbox/light-v9",
-    initial_view_state=pdk.ViewState(
-        latitude=-1.5,
-        longitude=-78.0,
-        zoom=5.5,
-        pitch=0,
-    ),
-    layers=[layer],
-    tooltip={"text": "📍 {ciudad}\nAQI: {aqi}"}
-))
+# ======= SECCIÓN 4: Recomendaciones personalizadas =======
+st.header("👤 Personaliza las recomendaciones")
 
-# ======= SECCIÓN 4: Botón de alerta y recomendaciones (puedes seguir agregando aquí) =======
+edad = st.slider("Edad", 5, 90, 16)
+asma = st.checkbox("Tengo asma o problemas respiratorios")
+zona = st.radio("¿Dónde vives?", ["Urbana", "Rural"])
+
+st.markdown("### Recomendaciones para ti:")
+
+if aqi > 150:
+    st.error("❌ Evita salir.")
+    if asma:
+        st.warning("⚠️ Riesgo alto para personas con asma.")
+elif aqi > 100:
+    st.warning("⚠️ Precaución al hacer ejercicio afuera.")
+else:
+    st.success("✅ Puedes salir con tranquilidad.")
+
+if zona == "Urbana" and aqi > 120:
+    st.info("🌇 Usa plantas purificadoras dentro de casa o ventilación cruzada.")
+
+if zona == "Rural" and aqi < 100:
+    st.info("🌳 Disfruta del aire limpio de tu zona rural.")
+
+# ======= SECCIÓN 5: Botón de alerta y consejos =======
 if st.button("🚨 Activar Alerta Sanitaria"):
     with st.expander("🔊 Instrucciones en caso de alerta"):
         st.write("- Evita salir de casa.")
