@@ -82,7 +82,7 @@ st.pydeck_chart(pdk.Deck(
 # Gráfico simulado evolución del AQI
 st.subheader("📈 Evolución simulada del AQI durante el día")
 horas = [f"{h}:00" for h in range(6, 20)]
-datos_simulados = [aqi + random.randint(-15, 15) for _ in horas]
+datos_simulados = [max(0, aqi + random.randint(-15, 15)) for _ in horas]
 df_graf = pd.DataFrame({"Hora": horas, "AQI": datos_simulados})
 st.line_chart(df_graf.set_index("Hora"))
 
@@ -118,4 +118,43 @@ st.pydeck_chart(pdk.Deck(
             get_position='[lon, lat]',
             get_color='color',
             get_radius=15000,
-            picka
+            pickable=True,
+        )
+    ],
+    tooltip={"text": "{ciudad}\nAQI: {aqi}"}
+))
+
+# ===== SECCIÓN 4: Recomendaciones personalizadas =====
+st.header("👤 Personaliza las recomendaciones")
+
+edad = st.slider("Edad", 5, 90, 16)
+asma = st.checkbox("Tengo asma o problemas respiratorios")
+zona = st.radio("¿Dónde vives?", ["Urbana", "Rural"])
+
+st.markdown("### Recomendaciones para ti:")
+
+if aqi > 150:
+    st.error("❌ Evita salir.")
+    if asma:
+        st.warning("⚠️ Riesgo alto para personas con asma.")
+elif aqi > 100:
+    st.warning("⚠️ Precaución al hacer ejercicio afuera.")
+else:
+    st.success("✅ Puedes salir con tranquilidad.")
+
+if zona == "Urbana" and aqi > 120:
+    st.info("🌇 Usa plantas purificadoras dentro de casa o ventilación cruzada.")
+
+if zona == "Rural" and aqi < 100:
+    st.info("🌳 Disfruta del aire limpio de tu zona rural.")
+
+# ===== SECCIÓN 5: Botón de alerta y consejos =====
+if st.button("🚨 Activar Alerta Sanitaria"):
+    with st.expander("🔊 Instrucciones en caso de alerta"):
+        st.write("- Evita salir de casa.")
+        st.write("- Usa mascarilla si es necesario salir.")
+        st.write("- Cierra puertas y ventanas.")
+        st.write("- Activa purificador o crea un filtro casero.")
+
+st.markdown("---")
+st.caption("🌐 Proyecto estudiantil – Unidad Educativa Julio Pierregrosse – App desarrollada en Streamlit")
