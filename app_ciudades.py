@@ -1,41 +1,55 @@
 import streamlit as st
 
-# Configurar la página
-st.set_page_config(page_title="Simulador Calidad del Aire", page_icon="🌬️", layout="centered")
+st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🇪🇨", layout="centered")
 
-# Título principal
-st.title("🌍 Simulador de Calidad del Aire por Ciudad")
+st.title("🇪🇨 Simulador de Calidad del Aire por Capitales del Ecuador")
 
 st.markdown("""
-Selecciona una ciudad del Ecuador para consultar un valor **simulado** del Índice de Calidad del Aire (AQI), basado en datos históricos y condiciones comunes.
+Selecciona la capital de una provincia del Ecuador para consultar un valor **simulado** del Índice de Calidad del Aire (AQI), basado en condiciones típicas.
 """)
 
-# Datos reales aproximados (valores AQI típicos)
-datos_realistas = {
-    "Quito": 85,
-    "Guayaquil": 155,
-    "Cuenca": 95,
-    "Loja": 70,
-    "Ambato": 115,
-    "Esmeraldas": 130,
-    "Manta": 105
+# Diccionario de provincias y capitales con valores simulados de AQI
+capitales_ecuador = {
+    "Quito (Pichincha)": 85,
+    "Guayaquil (Guayas)": 160,
+    "Cuenca (Azuay)": 95,
+    "Loja (Loja)": 70,
+    "Ambato (Tungurahua)": 115,
+    "Riobamba (Chimborazo)": 100,
+    "Portoviejo (Manabí)": 125,
+    "Machala (El Oro)": 135,
+    "Ibarra (Imbabura)": 90,
+    "Latacunga (Cotopaxi)": 105,
+    "Esmeraldas (Esmeraldas)": 130,
+    "Babahoyo (Los Ríos)": 145,
+    "Tulcán (Carchi)": 60,
+    "Nueva Loja (Sucumbíos)": 110,
+    "Tena (Napo)": 75,
+    "Puyo (Pastaza)": 80,
+    "Zamora (Zamora Chinchipe)": 65,
+    "Macas (Morona Santiago)": 78,
+    "Puerto Francisco de Orellana (Orellana)": 120,
+    "Santo Domingo (Santo Domingo de los Tsáchilas)": 130,
+    "Santa Elena (Santa Elena)": 140,
+    "Bolívar (Guaranda)": 85,
+    "Azogues (Cañar)": 90,
+    "San Cristóbal (Galápagos)": 40
 }
 
-# Descripciones por nivel AQI
+# Estilos por nivel de AQI
 niveles = {
     "BUENO": {"color": "green", "emoji": "✅", "mensaje": "Puedes respirar tranquilo 😌"},
     "MODERADO": {"color": "orange", "emoji": "⚠️", "mensaje": "Precaución para personas con asma"},
     "MALO": {"color": "red", "emoji": "❌", "mensaje": "Evita salir sin mascarilla 😷"}
 }
 
-# Elegir ciudad
-ciudad = st.selectbox("🌆 Elige una ciudad:", list(datos_realistas.keys()))
+# Menú de selección
+ciudad = st.selectbox("🏙️ Selecciona una capital de provincia:", list(capitales_ecuador.keys()))
 
-# Obtener valor AQI
-aqi = datos_realistas[ciudad]
-st.markdown(f"### AQI en **{ciudad}**: `{aqi}`")
+aqi = capitales_ecuador[ciudad]
+st.markdown(f"### AQI simulado para **{ciudad}**: `{aqi}`")
 
-# Evaluación
+# Clasificación
 if aqi > 150:
     nivel = "MALO"
 elif aqi > 100:
@@ -53,22 +67,22 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Mostrar barra de AQI
-st.markdown("#### Indicador visual del nivel AQI")
+# Indicador visual tipo barra
+st.markdown("#### Indicador de nivel AQI")
 st.progress(min(aqi / 200, 1.0))
 
-# Recomendaciones extra
+# Recomendaciones según nivel
 st.markdown("### 📝 Recomendaciones:")
 if nivel == "MALO":
-    st.write("- Usa mascarilla N95 si sales a la calle.")
-    st.write("- Cierra ventanas y evita ejercitarte afuera.")
-    st.write("- Usa purificadores o plantas si estás en casa.")
+    st.write("- Usa mascarilla N95 si sales.")
+    st.write("- Cierra ventanas y evita actividades al aire libre.")
+    st.write("- Usa filtros o purificadores si estás en casa.")
 elif nivel == "MODERADO":
-    st.write("- Personas con asma o alergias deben tener cuidado.")
-    st.write("- Evita actividades físicas intensas al aire libre.")
+    st.write("- Evita ejercicio intenso afuera.")
+    st.write("- Personas con asma deben tomar precauciones.")
 else:
-    st.write("- No hay restricciones. ¡Disfruta el día!")
+    st.write("- No hay restricciones. ¡Disfruta el aire libre!")
 
-# Pie de página
+# Pie
 st.markdown("---")
-st.caption("🌐 Simulación educativa basada en datos de ciudades del Ecuador. Proyecto estudiantil – Julio Pierregrosse.")
+st.caption("🌐 Simulación educativa – Proyecto estudiantil de predicción ambiental.")
