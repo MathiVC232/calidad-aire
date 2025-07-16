@@ -1,117 +1,64 @@
 import streamlit as st
+import pydeck as pdk
 import pandas as pd
-import random
 
-st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🌬️", layout="wide")
-st.title("🌬️ Evaluador de Calidad del Aire – Ecuador")
+st.title("Mapa interactivo básico con PyDeck - Calidad del Aire Ecuador")
 
-# Datos de ciudades
-ciudades = {
-    "Quito": 170,
-    "Guayaquil": 145,
-    "Cuenca": 100,
-    "Loja": 70,
-    "Ambato": 120,
-    "Machala": 130,
-    "Esmeraldas": 130,
-    "Manta": 125,
-    "Riobamba": 105,
-    "Tulcán": 65,
-    "Tena": 75,
-    "Galápagos": 40
-}
+# Datos de ejemplo (latitud, longitud, AQI, provincia)
+data = pd.DataFrame({
+    'Provincia': ['Pichincha', 'Guayas', 'Azuay', 'Loja', 'Tungurahua'],
+    'Lat': [-0.1807, -2.1894, -2.8974, -4.0041, -1.2532],
+    'Lon': [-78.4678, -79.8891, -78.9959, -79.2047, -78.6158],
+    'AQI': [170, 145, 100, 70, 120]
+})
 
-# Convertir a DataFrame
-df_ciudades = pd.DataFrame(list(ciudades.items()), columns=["Ciudad", "AQI"])
-
-# Colores según AQI
-def nivel_aqi(aqi):
+def get_color(aqi):
     if aqi > 150:
-        return "❌ MALO"
+        return [255, 0, 0]       # rojo
     elif aqi > 100:
-        return "⚠️ MODERADO"
+        return [255, 165, 0]     # naranja
     else:
-        return "✅ BUENO"
+        return [0, 128, 0]       # verde
 
-df_ciudades["Nivel"] = df_ciudades["AQI"].apply(nivel_aqi)
+data['color'] = data['AQI'].apply(get_color)
 
-# Selección de ciudad
-st.header("🌆 Selecciona una ciudad")
-ciudad = st.selectbox("Ciudad", df_ciudades["Ciudad"])
-aqi = ciudades[ciudad]
+# Crear el mapa PyDeck
+layer = pdk.Layer(
+    'ScatterplotLayer',
+    data=data,
+    get_position='[Lon, Lat]',
+    get_color='color',
+    get_radius=30000,
+    pickable=True,
+    radius_min_pixels=10,
+    radius_max_pixels=40,
+)
 
-# Indicador principal
-st.metric(label=f"AQI en {ciudad}", value=aqi)
+# Configuración del visor
+view_state = pdk.ViewState(
+    latitude=-1.5,
+    longitude=-78.5,
+    zoom=6,
+    pitch=0,
+)
 
-# Evaluación visual
-if aqi > 150:
-    color, mensaje = "red", "❌ MALO – Usa mascarilla 😷"
-elif aqi > 100:
-    color, mensaje = "orange", "⚠️ MODERADO – Precaución si tienes asma"
+r = pdk.Deck(
+    layers=[layer],
+    initial_view_state=view_state,
+    tooltip={"text": "{Provincia}\nAQI: {AQI}"}
+)
+
+st.pydeck_chart(r)
+
+# Selección y recomendaciones
+prov = st.selectbox("Selecciona una provincia:", data['Provincia'])
+aqi_sel = data.loc[data['Provincia'] == prov, 'AQI'].values[0]
+
+st.metric(f"AQI en {prov}", aqi_sel)
+
+if aqi_sel > 150:
+    st.error("❌ Calidad del aire MALA. Usa mascarilla y evita salir.")
+elif aqi_sel > 100:
+    st.warning("⚠️ Calidad MODERADA. Precaución si tienes asma o problemas respiratorios.")
 else:
-    color, mensaje = "green", "✅ BUENO – Puedes salir tranquilo 😊"
-
-st.markdown(f"""
-<div style="background-color:{color};padding:20px;border-radius:10px;text-align:center;">
-    <h2 style="color:white;">{mensaje}</h2>
-</div>
-""", unsafe_allow_html=True)
-
-# Evolución simulada
-st.subheader("📈 Evolución diaria del AQI")
-horas = [f"{h}:00" for h in range(6, 20)]
-datos = [max(0, aqi + random.randint(-15, 15)) for _ in horas]
-df_graf = pd.DataFrame({"Hora": horas, "AQI": datos})
-st.line_chart(df_graf.set_index("Hora"))
-
-# Comparar con otra ciudad
-st.subheader("🔁 Comparar con otra ciudad")
-otra = st.selectbox("Otra ciudad", [c for c in ciudades if c != ciudad])
-st.metric(label=f"AQI en {otra}", value=ciudades[otra])
-
-# Tabla resumen de todas las ciudades
-st.subheader("📋 Resumen de ciudades")
-
-def color_fila(val):
-    if val > 150:
-        return "background-color: red; color: white"
-    elif val > 100:
-        return "background-color: orange; color: black"
-    else:
-        return "background-color: lightgreen; color: black"
-
-st.dataframe(df_ciudades.style.applymap(color_fila, subset=["AQI"]))
-
-# Recomendaciones personalizadas
-st.subheader("👤 Recomendaciones personalizadas")
-edad = st.slider("Edad", 5, 90, 16)
-asma = st.checkbox("Tengo asma")
-zona = st.radio("Vivo en zona:", ["Urbana", "Rural"])
-
-st.markdown("### 📝 Recomendaciones:")
-
-if aqi > 150:
-    st.error("❌ Evita salir. Riesgo alto.")
-    if asma:
-        st.warning("⚠️ Riesgo grave si tienes asma.")
-elif aqi > 100:
-    st.warning("⚠️ Cuidado al hacer ejercicio al aire libre.")
-else:
-    st.success("✅ Buen aire, puedes disfrutar del exterior.")
-
-if zona == "Urbana" and aqi > 120:
-    st.info("🌇 Usa plantas purificadoras o ventilación cruzada.")
-elif zona == "Rural" and aqi < 100:
-    st.info("🌳 Disfruta del aire limpio de tu entorno.")
-
-# Botón de alerta
-if st.button("🚨 Activar Alerta Sanitaria"):
-    st.warning("🚨 ALERTA ACTIVADA")
-    with st.expander("🔊 Instrucciones"):
-        st.write("- Evita salir.")
-        st.write("- Usa mascarilla.")
-        st.write("- Cierra puertas y ventanas.")
-        st.write("- Usa filtro de aire casero si tienes uno.")
-
-st.markdown("---")
-st.caption("🌐 Proyecto estudiantil – Unidad Educativa Julio Pierregrosse – App desarrollada en Streamlit")
+    st.success("✅ Calidad BUENA. Puedes salir con tranquilidad.")
