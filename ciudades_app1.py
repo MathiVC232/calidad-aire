@@ -4,7 +4,7 @@ import pandas as pd
 import random
 
 st.set_page_config(page_title="Calidad del Aire Ecuador", page_icon="🌬️", layout="wide")
-st.title("\ud83c\udf2c\ufe0f Evaluador Interactivo de Calidad del Aire – Ecuador")
+st.title("🌬️ Evaluador Interactivo de Calidad del Aire – Ecuador")
 
 # ============================ DATOS BASE ============================
 data = pd.DataFrame({
@@ -42,7 +42,7 @@ def get_color(aqi):
 data['color'] = data['AQI'].apply(get_color)
 
 # ============================ MAPA PYDECK ============================
-st.subheader("\ud83d\uddfe\ufe0f Mapa interactivo de provincias")
+st.subheader("🗾 Mapa interactivo de provincias")
 layer = pdk.Layer(
     'ScatterplotLayer',
     data=data,
@@ -58,7 +58,7 @@ r = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{P
 st.pydeck_chart(r)
 
 # ============================ DETALLE DE UNA PROVINCIA ============================
-st.header("\ud83c\udfe0 Selecciona una provincia para ver detalles")
+st.header("🏠 Selecciona una provincia para ver detalles")
 prov = st.selectbox("Provincia", data['Provincia'])
 sel = data[data['Provincia'] == prov].iloc[0]
 
@@ -78,20 +78,20 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ============================ GRAFICO SIMULADO ============================
-st.subheader("\ud83d\udcca Evolución simulada del AQI durante el día")
+st.subheader("📊 Evolución simulada del AQI durante el día")
 horas = [f"{h}:00" for h in range(6, 20)]
 valores = [max(0, sel['AQI'] + random.randint(-10, 10)) for _ in horas]
 df_graf = pd.DataFrame({"Hora": horas, "AQI": valores})
 st.line_chart(df_graf.set_index("Hora"))
 
 # ============================ COMPARAR OTRA PROVINCIA ============================
-st.subheader("\ud83d\udd00 Comparar con otra provincia")
+st.subheader("🔀 Comparar con otra provincia")
 otra = st.selectbox("Otra provincia", [p for p in data['Provincia'] if p != prov])
 valor_otra = data.loc[data['Provincia'] == otra, 'AQI'].values[0]
 st.metric(f"AQI en {otra}", valor_otra)
 
 # ============================ RECOMENDACIONES ============================
-st.header("\ud83d\udc64 Personaliza tus recomendaciones")
+st.header("👤 Personaliza tus recomendaciones")
 edad = st.slider("Edad", 5, 90, 16)
 asma = st.checkbox("Tengo asma o problemas respiratorios")
 zona = st.radio("¿Dónde vives?", ["Urbana", "Rural"])
@@ -118,9 +118,9 @@ elif edad > 65 and sel['AQI'] > 100:
     st.warning("👴 Personas mayores deben tomar precauciones.")
 
 # ============================ ALERTA SANITARIA ============================
-if st.button("\ud83d\udea8 Activar Alerta Sanitaria"):
-    st.warning("\ud83d\udea8 ALERTA ACTIVADA")
-    with st.expander("\ud83d\udd0a Instrucciones en caso de alerta"):
+if st.button("🚨 Activar Alerta Sanitaria"):
+    st.warning("🚨 ALERTA ACTIVADA")
+    with st.expander("🔊 Instrucciones en caso de alerta"):
         st.write("- Evita salir de casa.")
         st.write("- Usa mascarilla si es necesario salir.")
         st.write("- Cierra puertas y ventanas.")
