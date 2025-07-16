@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import random
-import folium
-from streamlit_folium import st_folium
 import pydeck as pdk
 
 # Configuración página
@@ -26,16 +24,29 @@ ciudades = {
     "Galápagos": {"aqi": 40, "lat": -0.9022, "lon": -89.5926}
 }
 
-# === SECCIÓN 1: Detalle ciudad seleccionada ===
-st.header("🌆 Información de la ciudad seleccionada")
+# Convertir a DataFrame para pydeck
+df_ciudades = pd.DataFrame([
+    {"Ciudad": c, "Lat": d["lat"], "Lon": d["lon"], "AQI": d["aqi"]} for c, d in ciudades.items()
+])
 
-ciudad = st.selectbox("Selecciona una ciudad:", list(ciudades.keys()))
-info = ciudades[ciudad]
-aqi = info["aqi"]
+def color_por_aqi(aqi):
+    if aqi > 150:
+        return [255, 0, 0]       # rojo
+    elif aqi > 100:
+        return [255, 165, 0]     # naranja
+    else:
+        return [0, 128, 0]       # verde
+
+df_ciudades['color'] = df_ciudades['AQI'].apply(color_por_aqi)
+
+# SECCIÓN 1: Ciudad seleccionada y detalles
+st.header("🌆 Información de la ciudad seleccionada")
+ciudad = st.selectbox("Selecciona una ciudad:", df_ciudades['Ciudad'])
+info = df_ciudades[df_ciudades['Ciudad'] == ciudad].iloc[0]
+aqi = info['AQI']
 
 st.metric(label=f"AQI en {ciudad}", value=aqi)
 
-# Evaluación con color y emoji
 if aqi > 150:
     nivel, color, emoji = "MALO", "red", "❌"
 elif aqi > 100:
@@ -49,52 +60,53 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Mapa centrado en ciudad seleccionada con folium
-st.subheader(f"🗺️ Mapa interactivo de {ciudad}")
+# Mapa centrado en la ciudad seleccionada (pydeck)
+st.subheader(f"🗺️ Mapa de {ciudad}")
 
-m = folium.Map(location=[info["lat"], info["lon"]], zoom_start=12)
-folium.Marker(
-    location=[info["lat"], info["lon"]],
-    popup=f"{ciudad} - AQI: {aqi}",
-    icon=folium.Icon(color="red" if aqi>150 else "orange" if aqi>100 else "green")
-).add_to(m)
+view_ciudad = pdk.ViewState(
+    latitude=info['Lat'],
+    longitude=info['Lon'],
+    zoom=12,
+    pitch=0,
+)
 
-st_folium(m, width=700, height=450)
+layer_ciudad = pdk.Layer(
+    "ScatterplotLayer",
+    data=[info],
+    get_position='[Lon, Lat]',
+    get_color=info['color'],
+    get_radius=5000,
+    radius_min_pixels=20,
+    radius_max_pixels=40,
+)
 
-# Gráfico simulado evolución AQI
+deck_ciudad = pdk.Deck(
+    layers=[layer_ciudad],
+    initial_view_state=view_ciudad,
+    tooltip={"text": f"{ciudad}\nAQI: {aqi}"}
+)
+
+st.pydeck_chart(deck_ciudad)
+
+# Gráfico evolución AQI simulado
 st.subheader("📈 Evolución simulada del AQI durante el día")
 horas = [f"{h}:00" for h in range(6, 20)]
 datos_simulados = [max(0, aqi + random.randint(-15, 15)) for _ in horas]
 df_graf = pd.DataFrame({"Hora": horas, "AQI": datos_simulados})
 st.line_chart(df_graf.set_index("Hora"))
 
-# === SECCIÓN 2: Comparar con otra ciudad ===
+# SECCIÓN 2: Comparar con otra ciudad
 st.header("🔁 Comparar con otra ciudad")
-
-otra_ciudad = st.selectbox("Selecciona la ciudad para comparar:", [c for c in ciudades if c != ciudad])
-aqi2 = ciudades[otra_ciudad]["aqi"]
+otra_ciudad = st.selectbox("Selecciona la ciudad para comparar:", [c for c in df_ciudades['Ciudad'] if c != ciudad])
+aqi2 = df_ciudades[df_ciudades['Ciudad'] == otra_ciudad]['AQI'].values[0]
 st.metric(label=f"AQI en {otra_ciudad}", value=aqi2)
 
-# === SECCIÓN 3: Mapa general con PyDeck (todas las ciudades) ===
+# SECCIÓN 3: Mapa general con pydeck (todas las ciudades)
 st.header("🗺️ Mapa general interactivo de todas las ciudades")
 
-df_pydeck = pd.DataFrame([
-    {"Provincia": c, "Lat": d["lat"], "Lon": d["lon"], "AQI": d["aqi"]} for c,d in ciudades.items()
-])
-
-def get_color(aqi):
-    if aqi > 150:
-        return [255, 0, 0]       # rojo
-    elif aqi > 100:
-        return [255, 165, 0]     # naranja
-    else:
-        return [0, 128, 0]       # verde
-
-df_pydeck['color'] = df_pydeck['AQI'].apply(get_color)
-
-layer = pdk.Layer(
-    'ScatterplotLayer',
-    data=df_pydeck,
+layer_general = pdk.Layer(
+    "ScatterplotLayer",
+    data=df_ciudades,
     get_position='[Lon, Lat]',
     get_color='color',
     get_radius=30000,
@@ -103,22 +115,22 @@ layer = pdk.Layer(
     radius_max_pixels=40,
 )
 
-view_state = pdk.ViewState(
+view_general = pdk.ViewState(
     latitude=-1.5,
     longitude=-78.5,
     zoom=6,
     pitch=0,
 )
 
-r = pdk.Deck(
-    layers=[layer],
-    initial_view_state=view_state,
-    tooltip={"text": "{Provincia}\nAQI: {AQI}"}
+deck_general = pdk.Deck(
+    layers=[layer_general],
+    initial_view_state=view_general,
+    tooltip={"text": "{Ciudad}\nAQI: {AQI}"}
 )
 
-st.pydeck_chart(r)
+st.pydeck_chart(deck_general)
 
-# === SECCIÓN 4: Recomendaciones personalizadas ===
+# SECCIÓN 4: Recomendaciones personalizadas
 st.header("👤 Personaliza las recomendaciones")
 
 edad = st.slider("Edad", 5, 90, 16)
@@ -142,7 +154,7 @@ if zona == "Urbana" and aqi > 120:
 if zona == "Rural" and aqi < 100:
     st.info("🌳 Disfruta del aire limpio de tu zona rural.")
 
-# === SECCIÓN 5: Botón de alerta y consejos ===
+# SECCIÓN 5: Botón alerta y consejos
 if st.button("🚨 Activar Alerta Sanitaria"):
     with st.expander("🔊 Instrucciones en caso de alerta"):
         st.write("- Evita salir de casa.")
